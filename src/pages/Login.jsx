@@ -1,30 +1,60 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Wallet, User, Lock, Eye, EyeOff } from "lucide-react";
+import { Wallet, User, Lock, Eye, EyeOff, UserPlus } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const navigate = useNavigate();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const resetForm = () => {
+    setUsername("");
+    setPassword("");
+    setConfirmPassword("");
+    setError("");
+    setSuccess("");
+  };
+
+  const switchMode = () => {
+    setIsSignUp((prev) => !prev);
+    resetForm();
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     if (!username.trim() || !password.trim()) {
       setError("Please fill in all fields");
       return;
     }
 
-    const result = login(username.trim(), password);
-    if (result.success) {
-      navigate("/", { replace: true });
+    if (isSignUp) {
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      const result = register(username.trim(), password);
+      if (result.success) {
+        navigate("/", { replace: true });
+      } else {
+        setError(result.error);
+      }
     } else {
-      setError(result.error);
+      const result = login(username.trim(), password);
+      if (result.success) {
+        navigate("/", { replace: true });
+      } else {
+        setError(result.error);
+      }
     }
   };
 
@@ -47,12 +77,40 @@ export default function Login() {
               Fin<span className="text-accent-light">Track</span>
             </span>
           </div>
-          <p className="text-center text-gray-400 text-sm mb-8">
-            Sign in to manage your finances
+          <p className="text-center text-gray-400 text-sm mb-6">
+            {isSignUp ? "Create a new account" : "Sign in to manage your finances"}
           </p>
 
+          {/* Tab Toggle */}
+          <div className="flex bg-dark-700 rounded-xl p-1 mb-6">
+            <button
+              type="button"
+              onClick={() => isSignUp && switchMode()}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                !isSignUp
+                  ? "bg-accent text-white shadow-lg shadow-accent/20"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              <User size={15} />
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => !isSignUp && switchMode()}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                isSignUp
+                  ? "bg-accent text-white shadow-lg shadow-accent/20"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              <UserPlus size={15} />
+              Sign Up
+            </button>
+          </div>
+
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Username */}
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">
@@ -64,7 +122,7 @@ export default function Login() {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  placeholder={isSignUp ? "Choose a username" : "Enter username"}
                   className="w-full bg-dark-700 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all"
                 />
               </div>
@@ -81,7 +139,7 @@ export default function Login() {
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter password"
+                  placeholder={isSignUp ? "Create a password" : "Enter password"}
                   className="w-full bg-dark-700 border border-white/10 rounded-xl pl-11 pr-11 py-3 text-white text-sm placeholder-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all"
                 />
                 <button
@@ -94,10 +152,36 @@ export default function Login() {
               </div>
             </div>
 
+            {/* Confirm Password (Sign Up only) */}
+            {isSignUp && (
+              <div className="animate-fade-in">
+                <label className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">
+                  Confirm Password
+                </label>
+                <div className="relative">
+                  <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    className="w-full bg-dark-700 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder-gray-500 focus:border-accent focus:ring-1 focus:ring-accent outline-none transition-all"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Error */}
             {error && (
               <div className="text-expense text-sm text-center bg-expense/10 border border-expense/20 rounded-lg py-2 px-3 animate-fade-in">
                 {error}
+              </div>
+            )}
+
+            {/* Success */}
+            {success && (
+              <div className="text-income text-sm text-center bg-income/10 border border-income/20 rounded-lg py-2 px-3 animate-fade-in">
+                {success}
               </div>
             )}
 
@@ -106,32 +190,42 @@ export default function Login() {
               type="submit"
               className="w-full bg-accent hover:bg-accent-light text-white font-medium py-3 rounded-xl transition-all duration-200 shadow-lg shadow-accent/20 hover:shadow-accent/40"
             >
-              Sign In
+              {isSignUp ? "Create Account" : "Sign In"}
             </button>
           </form>
 
-          {/* Demo credentials hint */}
-          <div className="mt-6 pt-5 border-t border-white/5">
-            <p className="text-xs text-gray-500 text-center mb-2">Demo Accounts</p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => { setUsername("admin"); setPassword("admin123"); setError(""); }}
-                className="flex-1 text-xs text-gray-400 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg py-2 px-3 text-center transition-colors"
-              >
-                <span className="text-accent-light font-medium">Admin</span>
-                <br />admin / admin123
-              </button>
-              <button
-                type="button"
-                onClick={() => { setUsername("user"); setPassword("user123"); setError(""); }}
-                className="flex-1 text-xs text-gray-400 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg py-2 px-3 text-center transition-colors"
-              >
-                <span className="text-accent-light font-medium">User</span>
-                <br />user / user123
-              </button>
+          {/* Info text */}
+          {isSignUp && (
+            <p className="text-[11px] text-gray-500 text-center mt-3 animate-fade-in">
+              New accounts are created with standard user permissions.
+              <br />An admin can promote your account later.
+            </p>
+          )}
+
+          {/* Demo credentials hint (Sign In only) */}
+          {!isSignUp && (
+            <div className="mt-6 pt-5 border-t border-white/5">
+              <p className="text-xs text-gray-500 text-center mb-2">Demo Accounts</p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => { setUsername("admin"); setPassword("admin123"); setError(""); }}
+                  className="flex-1 text-xs text-gray-400 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg py-2 px-3 text-center transition-colors"
+                >
+                  <span className="text-accent-light font-medium">Admin</span>
+                  <br />admin / admin123
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setUsername("user"); setPassword("user123"); setError(""); }}
+                  className="flex-1 text-xs text-gray-400 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg py-2 px-3 text-center transition-colors"
+                >
+                  <span className="text-accent-light font-medium">User</span>
+                  <br />user / user123
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

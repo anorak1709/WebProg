@@ -28,6 +28,7 @@ export default function Admin() {
     });
 
   const actionStyles = {
+    register: "bg-accent/10 text-accent-light",
     login: "bg-income/10 text-income",
     logout: "bg-white/10 text-gray-300",
     role_change: "bg-warning/10 text-warning",

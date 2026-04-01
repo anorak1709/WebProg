@@ -49,6 +49,41 @@ export function AuthProvider({ children }) {
     [setAccessLogs]
   );
 
+  const register = useCallback(
+    (username, password) => {
+      const trimmed = username.trim();
+      if (!trimmed || !password) {
+        return { success: false, error: "Username and password are required" };
+      }
+      if (trimmed.length < 3) {
+        return { success: false, error: "Username must be at least 3 characters" };
+      }
+      if (password.length < 4) {
+        return { success: false, error: "Password must be at least 4 characters" };
+      }
+      const exists = users.find(
+        (u) => u.username.toLowerCase() === trimmed.toLowerCase()
+      );
+      if (exists) {
+        return { success: false, error: "Username already taken" };
+      }
+      const newUser = {
+        id: crypto.randomUUID(),
+        username: trimmed,
+        password,
+        role: "user",
+        createdAt: Date.now(),
+      };
+      setUsers((prev) => [...prev, newUser]);
+      const sessionUser = { id: newUser.id, username: newUser.username, role: newUser.role };
+      setCurrentUser(sessionUser);
+      addLog(newUser.id, newUser.username, "register");
+      addLog(newUser.id, newUser.username, "login");
+      return { success: true };
+    },
+    [users, setUsers, setCurrentUser, addLog]
+  );
+
   const login = useCallback(
     (username, password) => {
       const user = users.find(
@@ -110,12 +145,13 @@ export function AuthProvider({ children }) {
       accessLogs,
       isAuthenticated,
       isAdmin,
+      register,
       login,
       logout,
       updateUserRole,
       deleteUser,
     }),
-    [currentUser, users, accessLogs, isAuthenticated, isAdmin, login, logout, updateUserRole, deleteUser]
+    [currentUser, users, accessLogs, isAuthenticated, isAdmin, register, login, logout, updateUserRole, deleteUser]
   );
 
   return (
