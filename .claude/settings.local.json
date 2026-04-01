@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm create:*)",
-      "Bash(npx --yes create-vite . --template react)"
+      "Bash(npx --yes create-vite . --template react)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

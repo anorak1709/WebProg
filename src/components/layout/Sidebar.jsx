@@ -1,14 +1,24 @@
-import { NavLink } from "react-router-dom";
-import { LayoutDashboard, ArrowLeftRight, Wallet, BarChart3 } from "lucide-react";
-
-const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/transactions", icon: ArrowLeftRight, label: "Transactions" },
-  { to: "/budget", icon: Wallet, label: "Budget" },
-  { to: "/reports", icon: BarChart3, label: "Reports" },
-];
+import { NavLink, useNavigate } from "react-router-dom";
+import { LayoutDashboard, ArrowLeftRight, Wallet, BarChart3, Shield, LogOut } from "lucide-react";
+import { useAuth } from "../../hooks/useAuth";
 
 export default function Sidebar() {
+  const { isAdmin, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const navItems = [
+    { to: "/", icon: LayoutDashboard, label: "Dashboard" },
+    { to: "/transactions", icon: ArrowLeftRight, label: "Transactions" },
+    { to: "/budget", icon: Wallet, label: "Budget" },
+    { to: "/reports", icon: BarChart3, label: "Reports" },
+    ...(isAdmin ? [{ to: "/admin", icon: Shield, label: "Admin" }] : []),
+  ];
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <>
       {/* Desktop sidebar */}
@@ -21,7 +31,7 @@ export default function Sidebar() {
             Fin<span className="text-accent-light">Track</span>
           </span>
         </div>
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-col gap-1 flex-1">
           {navItems.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -40,6 +50,13 @@ export default function Sidebar() {
             </NavLink>
           ))}
         </nav>
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200 mt-auto"
+        >
+          <LogOut size={20} />
+          Logout
+        </button>
       </aside>
 
       {/* Mobile bottom nav */}
@@ -59,6 +76,13 @@ export default function Sidebar() {
             {label}
           </NavLink>
         ))}
+        <button
+          onClick={handleLogout}
+          className="flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-medium text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          <LogOut size={20} />
+          Logout
+        </button>
       </nav>
     </>
   );
