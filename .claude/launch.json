@@ -4,7 +4,7 @@
     {
       "name": "fintrack",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": ["run", "dev:full"],
       "port": 5173
     }
   ]

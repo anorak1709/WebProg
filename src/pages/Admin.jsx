@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Users, Shield, ShieldCheck, Activity, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import PageWrapper from "../components/layout/PageWrapper";
 import GlassCard from "../components/shared/GlassCard";
 
 export default function Admin() {
-  const { currentUser, users, accessLogs, updateUserRole, deleteUser } = useAuth();
+  const { currentUser, users, accessLogs, updateUserRole, deleteUser, fetchUsers, fetchLogs } = useAuth();
   const [logsExpanded, setLogsExpanded] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([fetchUsers(), fetchLogs()]).finally(() => setDataLoading(false));
+  }, [fetchUsers, fetchLogs]);
 
   const totalAdmins = users.filter((u) => u.role === "admin").length;
   const totalLogins = accessLogs.filter((l) => l.action === "login").length;
@@ -34,6 +39,16 @@ export default function Admin() {
     role_change: "bg-warning/10 text-warning",
     user_deleted: "bg-expense/10 text-expense",
   };
+
+  if (dataLoading) {
+    return (
+      <PageWrapper title="Admin Panel">
+        <div className="flex items-center justify-center py-20">
+          <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+        </div>
+      </PageWrapper>
+    );
+  }
 
   return (
     <PageWrapper title="Admin Panel">
@@ -187,7 +202,7 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {[...accessLogs].reverse().map((log) => (
+                    {accessLogs.map((log) => (
                       <tr key={log.id} className="border-b border-white/5">
                         <td className="py-2 px-3 text-gray-400 whitespace-nowrap">
                           {formatTimestamp(log.timestamp)}
@@ -203,7 +218,7 @@ export default function Admin() {
                           </span>
                         </td>
                         <td className="py-2 px-3 text-gray-500 text-xs hidden sm:table-cell">
-                          {log.details || "—"}
+                          {log.details || "\u2014"}
                         </td>
                       </tr>
                     ))}

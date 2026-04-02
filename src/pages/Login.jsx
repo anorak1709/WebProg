@@ -13,6 +13,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   const resetForm = () => {
     setUsername("");
@@ -27,7 +28,7 @@ export default function Login() {
     resetForm();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -42,19 +43,18 @@ export default function Login() {
         setError("Passwords do not match");
         return;
       }
-      const result = register(username.trim(), password);
-      if (result.success) {
-        navigate("/", { replace: true });
-      } else {
-        setError(result.error);
-      }
+    }
+
+    setSubmitting(true);
+    const result = await (isSignUp
+      ? register(username.trim(), password)
+      : login(username.trim(), password));
+    setSubmitting(false);
+
+    if (result.success) {
+      navigate("/", { replace: true });
     } else {
-      const result = login(username.trim(), password);
-      if (result.success) {
-        navigate("/", { replace: true });
-      } else {
-        setError(result.error);
-      }
+      setError(result.error);
     }
   };
 
@@ -188,9 +188,10 @@ export default function Login() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full bg-accent hover:bg-accent-light text-white font-medium py-3 rounded-xl transition-all duration-200 shadow-lg shadow-accent/20 hover:shadow-accent/40"
+              disabled={submitting}
+              className="w-full bg-accent hover:bg-accent-light text-white font-medium py-3 rounded-xl transition-all duration-200 shadow-lg shadow-accent/20 hover:shadow-accent/40 disabled:opacity-50"
             >
-              {isSignUp ? "Create Account" : "Sign In"}
+              {submitting ? "Please wait..." : isSignUp ? "Create Account" : "Sign In"}
             </button>
           </form>
 

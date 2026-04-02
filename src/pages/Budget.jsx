@@ -17,12 +17,20 @@ export default function Budget() {
   const monthBudgets = getMonthBudgets(activeMonth);
   const spentByCategory = getSpentByCategory(activeMonth);
 
-  const handleSave = (category, limit) => {
-    setBudget(category, activeMonth, limit);
+  const handleSave = async (category, limit) => {
+    try {
+      await setBudget(category, activeMonth, limit);
+    } catch (err) {
+      console.error("Failed to save budget:", err.message);
+    }
   };
 
-  const handleDelete = (category) => {
-    deleteBudget(category, activeMonth);
+  const handleDelete = async (category) => {
+    try {
+      await deleteBudget(category, activeMonth);
+    } catch (err) {
+      console.error("Failed to delete budget:", err.message);
+    }
   };
 
   return (

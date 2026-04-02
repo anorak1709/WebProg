@@ -1,68 +1,105 @@
-import { createContext, useState, useMemo, useCallback } from "react";
-import { useLocalStorage } from "../hooks/useLocalStorage";
+import { createContext, useState, useMemo, useCallback, useEffect } from "react";
 import { getCurrentMonthKey } from "../utils/dateHelpers";
 import { calcSpentPerCategory, getBudgetStatus } from "../utils/budgetHelpers";
+import { api } from "../api";
+import { useAuth } from "../hooks/useAuth";
 
 export const FinanceContext = createContext(null);
 
 export function FinanceProvider({ children }) {
-  const [transactions, setTransactions] = useLocalStorage("finance_transactions", []);
-  const [budgets, setBudgets] = useLocalStorage("finance_budgets", []);
+  const { isAuthenticated } = useAuth();
+  const [transactions, setTransactions] = useState([]);
+  const [budgets, setBudgets] = useState([]);
   const [activeMonth, setActiveMonth] = useState(getCurrentMonthKey());
+  const [loading, setLoading] = useState(false);
 
-  const addTransaction = useCallback(
-    (data) => {
-      const txn = {
-        ...data,
-        id: crypto.randomUUID(),
-        createdAt: Date.now(),
-      };
-      setTransactions((prev) => [...prev, txn]);
-    },
-    [setTransactions]
-  );
+  // Fetch data when authenticated or month changes
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setTransactions([]);
+      setBudgets([]);
+      return;
+    }
 
-  const updateTransaction = useCallback(
-    (id, patch) => {
-      setTransactions((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, ...patch } : t))
-      );
-    },
-    [setTransactions]
-  );
+    let cancelled = false;
+    setLoading(true);
 
-  const deleteTransaction = useCallback(
-    (id) => {
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
-    },
-    [setTransactions]
-  );
-
-  const setBudget = useCallback(
-    (category, month, limit) => {
-      setBudgets((prev) => {
-        const idx = prev.findIndex(
-          (b) => b.category === category && b.month === month
-        );
-        if (idx >= 0) {
-          const updated = [...prev];
-          updated[idx] = { ...updated[idx], limit };
-          return updated;
+    Promise.all([
+      api(`/api/transactions?month=${activeMonth}`),
+      api(`/api/budgets?month=${activeMonth}`),
+    ])
+      .then(([txnData, budgetData]) => {
+        if (!cancelled) {
+          setTransactions(txnData.transactions);
+          setBudgets(budgetData.budgets);
         }
-        return [...prev, { category, month, limit }];
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTransactions([]);
+          setBudgets([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
-    },
-    [setBudgets]
-  );
 
-  const deleteBudget = useCallback(
-    (category, month) => {
-      setBudgets((prev) =>
-        prev.filter((b) => !(b.category === category && b.month === month))
+    return () => { cancelled = true; };
+  }, [isAuthenticated, activeMonth]);
+
+  const addTransaction = useCallback(async (data) => {
+    const res = await api("/api/transactions", {
+      method: "POST",
+      body: data,
+    });
+    // Only add to local state if it belongs to the active month
+    if (res.transaction.date.startsWith(activeMonth)) {
+      setTransactions((prev) => [res.transaction, ...prev]);
+    }
+  }, [activeMonth]);
+
+  const updateTransaction = useCallback(async (id, patch) => {
+    const res = await api(`/api/transactions/${id}`, {
+      method: "PUT",
+      body: patch,
+    });
+    setTransactions((prev) =>
+      prev.map((t) => (t.id === id ? res.transaction : t))
+    );
+  }, []);
+
+  const deleteTransaction = useCallback(async (id) => {
+    await api(`/api/transactions/${id}`, { method: "DELETE" });
+    setTransactions((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+
+  const setBudget = useCallback(async (category, month, limit) => {
+    const res = await api("/api/budgets", {
+      method: "PUT",
+      body: { category, month, limit },
+    });
+    setBudgets((prev) => {
+      const idx = prev.findIndex(
+        (b) => b.category === category && b.month === month
       );
-    },
-    [setBudgets]
-  );
+      if (idx >= 0) {
+        const updated = [...prev];
+        updated[idx] = res.budget;
+        return updated;
+      }
+      return [...prev, res.budget];
+    });
+  }, []);
+
+  const deleteBudget = useCallback(async (category, month) => {
+    await api("/api/budgets", {
+      method: "DELETE",
+      body: { category, month },
+    });
+    setBudgets((prev) =>
+      prev.filter((b) => !(b.category === category && b.month === month))
+    );
+  }, []);
 
   const getMonthlyTransactions = useCallback(
     (month) => transactions.filter((t) => t.date.startsWith(month)),
@@ -111,6 +148,7 @@ export function FinanceProvider({ children }) {
       transactions,
       budgets,
       activeMonth,
+      loading,
       setActiveMonth,
       addTransaction,
       updateTransaction,
@@ -127,6 +165,7 @@ export function FinanceProvider({ children }) {
       transactions,
       budgets,
       activeMonth,
+      loading,
       addTransaction,
       updateTransaction,
       deleteTransaction,

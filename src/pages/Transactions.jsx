@@ -57,19 +57,27 @@ export default function Transactions() {
     setModalOpen(true);
   };
 
-  const handleSubmit = (data) => {
-    if (editingTxn) {
-      updateTransaction(editingTxn.id, data);
-    } else {
-      addTransaction(data);
+  const handleSubmit = async (data) => {
+    try {
+      if (editingTxn) {
+        await updateTransaction(editingTxn.id, data);
+      } else {
+        await addTransaction(data);
+      }
+      setModalOpen(false);
+      setEditingTxn(null);
+    } catch (err) {
+      console.error("Failed to save transaction:", err.message);
     }
-    setModalOpen(false);
-    setEditingTxn(null);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deleteId) {
-      deleteTransaction(deleteId);
+      try {
+        await deleteTransaction(deleteId);
+      } catch (err) {
+        console.error("Failed to delete transaction:", err.message);
+      }
       setDeleteId(null);
     }
   };
